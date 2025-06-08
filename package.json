@@ -1,0 +1,19 @@
+{
+  "name": "radiohead-house-of-cards",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "John D. Corrado",
+  "license": "MIT",
+  "description": "",
+  "dependencies": {
+    "three": "^0.177.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
