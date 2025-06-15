@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
 
 const verticesUrl = import.meta.env.VITE_VERTICES_URL;
 const musicUrl = import.meta.env.VITE_MUSIC_URL;
@@ -56,7 +57,9 @@ const camera = new THREE.PerspectiveCamera(THREE.MathUtils.radToDeg(fov), window
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
 
 camera.position.x = window.innerWidth / 2;
 camera.position.y = window.innerHeight / 2;
@@ -109,7 +112,13 @@ function animate() {
       renderer.setAnimationLoop(null);
       frameCount = 1;
       renderFrame(1);
+      renderer.render(scene, camera);
       playing = false;
+
+      if (renderer.xr.getSession() != null) {
+        renderer.xr.getSession().end();
+      }
+
       return;
     }
 
@@ -119,14 +128,16 @@ function animate() {
 
     delta = delta % interval;
   }
+
+  renderer.render(scene, camera);
 }
 
 async function renderFrame(n) {
   await loadGeometry(vertexData[n - 1]);
-  renderer.render(scene, camera);
 }
 
 renderFrame(1);
+renderer.render(scene, camera);
 
 let playing = false;
 
@@ -145,6 +156,44 @@ document.addEventListener('visibilitychange', function () {
     renderer.setAnimationLoop(null);
     frameCount = 1;
     renderFrame(1);
+    renderer.render(scene, camera);
     playing = false;
   }
+});
+
+renderer.xr.addEventListener('sessionstart', function () {
+  camera.near = 0.1;
+  camera.far = 10;
+  camera.updateProjectionMatrix();
+  material.size = 0.0001;
+  points.scale.set(0.001, -0.001, 0.001);
+  points.position.set(0, 0, 0);
+  points.translateX(-0.05);
+  points.translateY(1.75);
+  points.translateZ(-0.3);
+});
+
+renderer.xr.addEventListener('sessionend', function () {
+  camera.fov = THREE.MathUtils.radToDeg(fov);
+  camera.near = cameraZ / 10;
+  camera.far = cameraZ * 10;
+  camera.updateProjectionMatrix();
+  camera.position.x = window.innerWidth / 2;
+  camera.position.y = window.innerHeight / 2;
+  camera.position.z = (window.innerHeight / 2) / Math.tan(fov / 2);
+  camera.lookAt(window.innerWidth / 2, window.innerHeight / 2, 0);
+  material.size = 1.0;
+  points.scale.set(2.0, -2.0, 2.0);
+  points.position.set(0, 0, 0);
+  points.translateX(window.innerWidth / 2 - 150);
+  points.translateY(window.innerHeight / 2 + 150);
+  points.translateZ(150);
+  renderFrame(1);
+  renderer.render(scene, camera);
+});
+
+window.addEventListener('resize', function() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
