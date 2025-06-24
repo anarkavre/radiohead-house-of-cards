@@ -10,7 +10,15 @@ let maxVertices = 0;
 const progress = document.getElementById('progress');
 
 async function loadVertexData() {
-  const response = await fetch(verticesUrl);
+  const cache = await caches.open('radiohead-house-of-cards');
+  let response = await cache.match(verticesUrl);
+  let cacheResponse = false;
+
+  if (!response) {
+    response = await fetch(verticesUrl);
+    cacheResponse = true;
+  }
+
   let bytesRead = 0;
   let totalBytes;
   let data;
@@ -19,7 +27,7 @@ async function loadVertexData() {
     if (!totalBytes) {
       const dataView = new DataView(chunk.slice(0, 4).buffer);
       totalBytes = dataView.getUint32(0, true);
-      data = chunk.slice(4);
+      data = chunk;
     } else {
       const newData = new Uint8Array(data.length + chunk.length)
       newData.set(data, 0);
@@ -31,8 +39,18 @@ async function loadVertexData() {
     progress.value = bytesRead / totalBytes * 100;
   }
 
+  if (cacheResponse) {
+    response = new Response(data, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': data.length
+      }
+    });
+    await cache.put(verticesUrl, response);
+  }
+
   const buffer = data.buffer;
-  let offset = 0;
+  let offset = 4;
 
   while (offset < buffer.byteLength) {
     const dataView = new DataView(buffer.slice(offset, offset + 4));
